@@ -1,11 +1,22 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-from crud import add_user, get_tasks, get_completed_tasks_count
+from requests import add_user, get_tasks, get_completed_tasks_count
 from models import init_db
 
+import requests as rq
+
+class AddTask(BaseModel):
+    tg_id:int
+    title:str
+
+
+
+class CompleteTask(BaseModel):
+    id:int
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
@@ -36,3 +47,15 @@ async def profile(tg_id: int):
     user = await add_user(tg_id)
     completed_task_count = await get_completed_tasks_count(user.id)
     return {"completedTasks": completed_task_count}
+
+
+@app.post("/api/add")
+async def add_task(task: AddTask):
+    user = await rq.add_user(task.tg_id)
+    await rq.add_task(user.id,task.title)
+    return {'status':'ok'}
+
+@app.patch("/api/completed")
+async def complete_task(task: CompleteTask):
+    await rq.update_task(task.id)
+    return {'status':'ok'}
